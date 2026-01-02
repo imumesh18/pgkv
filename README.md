@@ -4,8 +4,8 @@ A high-performance, production-grade key-value store backed by PostgreSQL unlogg
 
 [![Crates.io](https://img.shields.io/crates/v/pgkv.svg)](https://crates.io/crates/pgkv)
 [![Documentation](https://docs.rs/pgkv/badge.svg)](https://docs.rs/pgkv)
-[![CI](https://github.com/imumesh18/pgkv/workflows/CI/badge.svg)](https://github.com/yourusername/pgkv/actions)
-[![License](https://img.shields.io/crates/l/pgkv.svg)](LICENSE)
+[![CI](https://github.com/imumesh18/pgkv/workflows/CI/badge.svg)](https://github.com/imumesh18/pgkv/actions)
+[![License](https://img.shields.io/crates/l/pgkv.svg)](https://github.com/imumesh18/pgkv#license)
 
 ## Features
 
@@ -404,9 +404,4 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-Licensed under either of:
-
-- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
-- MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
-
-at your option.
+Licensed under the [MIT License](LICENSE).
