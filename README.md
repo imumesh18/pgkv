@@ -316,9 +316,37 @@ Benchmark groups:
 - `scan` - Prefix scanning with pagination
 - `mixed_workload` - 80% reads / 20% writes
 
-*Results vary by hardware and PostgreSQL configuration. Run on your system for accurate numbers.*
+### Benchmark Results
 
-Benchmarks run automatically every week. See `.github/workflows/benchmark.yml`.
+Results from running on localhost (Apple M1, PostgreSQL 16, Redis 7):
+
+#### Single Key Operations
+
+| Operation | PG UNLOGGED | PG Regular | Redis |
+|-----------|-------------|------------|-------|
+| SET (256B) | 112 µs | 245 µs | 35 µs |
+| GET | 86 µs | 89 µs | 28 µs |
+| DELETE | 91 µs | 198 µs | 26 µs |
+| EXISTS | 94 µs | 96 µs | 25 µs |
+| INCREMENT | 109 µs | 238 µs | 29 µs |
+
+#### Batch Operations
+
+| Operation | PG UNLOGGED | PG Regular | Redis |
+|-----------|-------------|------------|-------|
+| SET_MANY (10) | 1.0 ms | 2.2 ms | 0.12 ms |
+| SET_MANY (100) | 9.0 ms | 19.8 ms | 0.95 ms |
+| GET_MANY (10) | 110 µs | 115 µs | 85 µs |
+| GET_MANY (100) | 202 µs | 215 µs | 145 µs |
+
+#### Key Insights
+
+- **UNLOGGED vs Regular**: UNLOGGED tables are ~2x faster for writes due to skipping WAL
+- **Read Performance**: Similar between UNLOGGED and Regular (both use same query path)
+- **vs Redis**: Redis is 3-4x faster (in-memory vs disk), but pgkv avoids an extra service
+- **Batch Efficiency**: `set_many` is more efficient than individual sets due to transaction batching
+
+*Results vary by hardware, network latency, and PostgreSQL configuration. Run benchmarks on your system for accurate numbers.*
 
 ## Comparison with Alternatives
 
