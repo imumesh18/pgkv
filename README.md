@@ -4,7 +4,7 @@ A high-performance, production-grade key-value store backed by PostgreSQL unlogg
 
 [![Crates.io](https://img.shields.io/crates/v/pgkv.svg)](https://crates.io/crates/pgkv)
 [![Documentation](https://docs.rs/pgkv/badge.svg)](https://docs.rs/pgkv)
-[![CI](https://github.com/yourusername/pgkv/workflows/CI/badge.svg)](https://github.com/yourusername/pgkv/actions)
+[![CI](https://github.com/imumesh18/pgkv/workflows/CI/badge.svg)](https://github.com/yourusername/pgkv/actions)
 [![License](https://img.shields.io/crates/l/pgkv.svg)](LICENSE)
 
 ## Features
