@@ -1,0 +1,48 @@
+[package]
+name = "pgkv"
+version = "0.1.0"
+edition = "2024"
+authors = ["Umesh Yadav <umesh4257@gmail.com>"]
+description = "A high-performance key-value store backed by PostgreSQL unlogged tables"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/imumesh18/pgkv"
+documentation = "https://docs.rs/pgkv"
+readme = "README.md"
+keywords = ["postgresql", "key-value", "cache", "database", "unlogged"]
+categories = ["database", "caching"]
+rust-version = "1.85"
+
+[features]
+default = []
+# Enable serde support for automatic serialization
+serde = ["dep:serde", "dep:serde_json"]
+
+[dependencies]
+# Minimal dependencies - only what's absolutely necessary
+postgres = "0.19"
+
+# Optional serde support
+serde = { version = "1.0", features = ["derive"], optional = true }
+serde_json = { version = "1.0", optional = true }
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+rand = "0.8"
+redis = "1.0"
+
+[[bench]]
+name = "kv_benchmarks"
+harness = false
+
+[profile.bench]
+opt-level = 3
+lto = true
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

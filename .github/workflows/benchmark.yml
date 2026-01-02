@@ -1,0 +1,172 @@
+name: Weekly Benchmarks
+
+on:
+  schedule:
+    # Run every Sunday at 00:00 UTC
+    - cron: '0 0 * * 0'
+  workflow_dispatch:  # Allow manual triggers
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  benchmark:
+    name: Run Benchmarks
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: pgkv_bench
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-bench-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Run benchmarks
+        run: cargo bench --bench kv_benchmarks -- --noplot 2>&1 | tee benchmark_results.txt
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost/pgkv_bench
+
+      - name: Parse benchmark results
+        id: parse
+        run: |
+          # Extract key benchmark numbers
+          echo "## Benchmark Results" > benchmark_summary.md
+          echo "" >> benchmark_summary.md
+          echo "| Operation | Time |" >> benchmark_summary.md
+          echo "|-----------|------|" >> benchmark_summary.md
+
+          # Extract timing data from criterion output
+          grep -E "^(set|get|delete|increment|scan|exists)" benchmark_results.txt | head -20 >> benchmark_summary.md || true
+
+          cat benchmark_summary.md
+
+      - name: Check for significant changes
+        id: check_changes
+        run: |
+          # Get previous benchmark results if they exist
+          if [ -f README.md ]; then
+            PREV_SET=$(grep -oP 'SET.*?~\K[\d.]+' README.md 2>/dev/null | head -1 || echo "0")
+            CURR_SET=$(grep -oP 'set/64.*?time:.*?\[.*?([\d.]+)' benchmark_results.txt 2>/dev/null | head -1 || echo "0")
+
+            echo "Previous SET: $PREV_SET"
+            echo "Current SET: $CURR_SET"
+
+            # Flag if difference > 10%
+            echo "significant_change=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update README with benchmark results
+        run: |
+          # Extract benchmark data
+          python3 << 'EOF'
+          import re
+          import sys
+
+          def parse_criterion_output(filename):
+              """Parse criterion benchmark output."""
+              results = {}
+              try:
+                  with open(filename, 'r') as f:
+                      content = f.read()
+
+                  # Pattern for criterion output like "set/64    time:   [1.2345 ms 1.2456 ms 1.2567 ms]"
+                  pattern = r'(\w+(?:/\d+)?)\s+time:\s+\[([\d.]+)\s+(\w+)\s+([\d.]+)\s+(\w+)\s+([\d.]+)\s+(\w+)\]'
+                  matches = re.findall(pattern, content)
+
+                  for match in matches:
+                      name = match[0]
+                      median = float(match[3])
+                      unit = match[4]
+                      results[name] = f"{median:.2f} {unit}"
+              except Exception as e:
+                  print(f"Error parsing: {e}", file=sys.stderr)
+
+              return results
+
+          def update_readme(results):
+              """Update README.md with new benchmark results."""
+              try:
+                  with open('README.md', 'r') as f:
+                      readme = f.read()
+              except FileNotFoundError:
+                  return
+
+              # Find and replace benchmark section
+              bench_section = "\n## Benchmarks\n\n"
+              bench_section += "Latest benchmark results (PostgreSQL 16, Ubuntu):\n\n"
+              bench_section += "| Operation | Median Time |\n"
+              bench_section += "|-----------|-------------|\n"
+
+              for name, time in sorted(results.items()):
+                  bench_section += f"| {name} | {time} |\n"
+
+              bench_section += "\n*Run `cargo bench` to measure on your system.*\n"
+
+              # Replace existing benchmark section or append
+              if "## Benchmarks" in readme:
+                  readme = re.sub(
+                      r'## Benchmarks.*?(?=\n## |\Z)',
+                      bench_section,
+                      readme,
+                      flags=re.DOTALL
+                  )
+              else:
+                  readme += bench_section
+
+              with open('README.md', 'w') as f:
+                  f.write(readme)
+
+              print("README.md updated with benchmark results")
+
+          results = parse_criterion_output('benchmark_results.txt')
+          if results:
+              update_readme(results)
+          else:
+              print("No benchmark results found")
+          EOF
+
+      - name: Commit benchmark updates
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+          if git diff --quiet README.md; then
+            echo "No changes to commit"
+          else
+            git add README.md
+            git commit -m "docs: update benchmark results [skip ci]"
+            git push
+          fi
+
+      - name: Upload benchmark artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: |
+            benchmark_results.txt
+            target/criterion/
+          retention-days: 90
