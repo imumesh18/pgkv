@@ -8,6 +8,9 @@ on:
 env:
   CARGO_TERM_COLOR: always
 
+permissions:
+  contents: read
+
 jobs:
   create-release:
     name: Create Release
@@ -17,7 +20,7 @@ jobs:
     outputs:
       version: ${{ steps.get_version.outputs.version }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           fetch-depth: 0
 
@@ -58,7 +61,7 @@ jobs:
           echo '```' >> release_notes.md
 
       - name: Create Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           name: Release ${{ steps.get_version.outputs.version }}
           body_path: release_notes.md
@@ -71,6 +74,10 @@ jobs:
     name: Publish to crates.io
     runs-on: ubuntu-latest
     needs: create-release
+    permissions:
+      contents: read
+      # required by rust-lang/crates-io-auth-action (OIDC token request)
+      id-token: write
     services:
       postgres:
         image: postgres:16-alpine
@@ -86,7 +93,7 @@ jobs:
         ports:
           - 5432:5432
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
       - name: Install Rust toolchain
         run: |
@@ -94,7 +101,7 @@ jobs:
           rustup default stable
 
       - name: Cache dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: |
             ~/.cargo/registry
@@ -124,7 +131,7 @@ jobs:
 
       - name: Authenticate with crates.io
         id: auth
-        uses: rust-lang/crates-io-auth-action@v1
+        uses: rust-lang/crates-io-auth-action@3268eb413133e2960fa4ae0e963ca76380c54cd9 # v1.0.6
 
       - name: Publish crate
         run: cargo publish
